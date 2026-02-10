@@ -8,11 +8,25 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+
 $query = 'SELECT * FROM users WHERE role = "client"';
 $result = mysqli_query($conn, $query);
 ?>
 
 <div class="container mt-5">
+    <div class="row border rounded p-4 mb-4">
+        <div class="col">
+            <h2>Import your CSV list</h2>
+            <p>Upload a CSV with header: ID, Email, Name and Role. New users get the password: <span class="fw-bold">ChangeMe</span></p>
+            <form action="admin.php" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="profilePic" class="form-label">CSV list</label>
+                    <input type="file" class="form-control" name="csv_file" id="csv_file" accept=".csv">
+                </div>
+                <button type="submit" class="btn btn-succes">Import CSV</button>
+            </form>
+        </div>
+    </div>
     <div class="row">
         <div class="col">
             <h1>Admin Dashboard</h1>
