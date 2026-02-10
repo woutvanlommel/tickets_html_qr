@@ -144,34 +144,36 @@ $orderResult = mysqli_query($conn, $orderQuery);
         </div>
     </div>
 
-    <div>
+    <div class="mt-4">
         <h2>Orders</h2>
-        <table class="table">
-            <thead>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
                 <tr>
-                    <th>ID</th>
-                    <th>Status</th>
-                    <th>Email</th>
-                    <th>Amount</th>
-                    <th>User ID</th>
-                    <th>PP Ticket</th>
-                    <th>Order Date</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">User ID</th>
+                    <th scope="col">PP Ticket</th>
+                    <th scope="col">Order Date</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if ($orderResult) {
-                    foreach ($orderResult as $row) {
-                        echo "<tr>
-                            <td>$row['id']</td>
-                            <td>$row['status']</td>
-                            <td>$row['email']</td>
-                            <td>$row['amount']</td>
-                            <td>$row['user_id']</td>
-                            <td>$row['ppticket']</td>
-                            <td>$row['order_date']</td>
-                        </tr>";
-                    }
-                }
+                <?php if ($orderResult && mysqli_num_rows($orderResult) > 0): ?>
+                    <?php foreach ($orderResult as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($row['id']); ?></td>
+                            <td><span class="badge bg-info text-dark"><?php echo htmlspecialchars($row['status']); ?></span></td>
+                            <td><?php echo htmlspecialchars($row['email']); ?></td>
+                            <td><?php echo htmlspecialchars($row['amount']); ?></td>
+                            <td><?php echo htmlspecialchars($row['user_id']); ?></td>
+                            <td>€<?php echo number_format($row['ppticket'], 2, ',', '.'); ?></td>
+                            <td><?php echo htmlspecialchars($row['order_date']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 
