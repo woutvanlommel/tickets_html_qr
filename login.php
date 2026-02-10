@@ -14,23 +14,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = $_POST['password']; // Raw password for verification
 
-    // Prepare SQL query to fetch the user with the given email
+    // Bereid de SQL query voor (role is een enum in de users tabel)
     $sql = "SELECT * FROM users WHERE email = '$email'";
     $result = mysqli_query($conn, $sql);
 
-    // Check if a user with that email exists
+    // Check of er een gebruiker met dit emailadres bestaat
     if (mysqli_num_rows($result) > 0) {
         $user = mysqli_fetch_assoc($result);
-        
-        // Verify the password: checks if the provided password matches the hash in the database
-        // password_verify() handles the hashing algorithm automatically
+
+        // Controleer het wachtwoord
         if (password_verify($password, $user['password'])) {
-            // Password is correct!
-            
-            // Store user details in the SESSION superglobal
+            // Wachtwoord is correct!
+
+            // Sla gebruikersgegevens op in de SESSION
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['email'] = $user['email'];
             $_SESSION['name'] = $user['name'];
+            $_SESSION['role'] = $user['role']; // De rol uit de enum kolom
+
 
             // Optional: Redirect to the home page or dashboard
             header("Location: index.php");
@@ -50,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="row justify-content-center">
         <div class="col-md-6">
             <h1>Login</h1>
-            
+
             <?php if ($message): ?>
                 <div class="alert alert-danger"><?php echo $message; ?></div>
             <?php endif; ?>
@@ -74,4 +75,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 
 </body>
+
 </html>
