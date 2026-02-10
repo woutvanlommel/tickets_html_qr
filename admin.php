@@ -111,6 +111,9 @@ if (isset($_POST['import_users'])) {
         }
     }
 }
+
+$orderQuery = 'SELECT * FROM tickets';
+$orderResult = mysqli_query($conn, $orderQuery);
 ?>
 
 <div class="container mt-4">
@@ -140,7 +143,38 @@ if (isset($_POST['import_users'])) {
             </form>
         </div>
     </div>
+
+    <div>
+        <h2>Orders</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Email</th>
+                    <th>Amount</th>
+                    <th>User ID</th>
+                    <th>PP Ticket</th>
+                    <th>Order Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($orderResult) {
+                    foreach ($orderResult as $row) {
+                        echo "<tr>
+                            <td>$row['id']</td>
+                            <td>$row['status']</td>
+                            <td>$row['email']</td>
+                            <td>$row['amount']</td>
+                            <td>$row['user_id']</td>
+                            <td>$row['ppticket']</td>
+                            <td>$row['order_date']</td>
+                        </tr>";
+                    }
+                }
+    </div>
 </div>
 
 </body>
+
 </html>

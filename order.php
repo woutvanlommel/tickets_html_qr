@@ -7,7 +7,7 @@ include 'includes/header.php'
     <div class="col">
       <h1>Order</h1>
       <?php if (isset($_SESSION['email'])) { ?>
-        <p>Hello <?php echo $_SESSION['email'] ?></p>
+        <p>Hello <?php echo $_SESSION['name'] ?></p>
         <h2>Please order your tickets here</h2>
         <p>Amount EUR 45 per ticket</p>
         <form action="orderprocess.php" method="post">
