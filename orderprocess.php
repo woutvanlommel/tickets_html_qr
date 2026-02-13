@@ -27,36 +27,39 @@ $dompdf = new Dompdf($options);
 
 $html = "<html><head><style>
     body { font-family: sans-serif; }
-    .ticket { border: 2px solid #764ba2; padding: 50px; margin-bottom: 20px; text-align: center; border-radius: 15px; }
+    .ticket { border: 2px solid #764ba2; padding: 50px; text-align: center; border-radius: 15px; }
     .qr-code { margin-top: 30px; }
-    .page-break { page-break-after: always; }
     h1 { color: #764ba2; }
+    .persons { font-size: 24px; font-weight: bold; color: #764ba2; margin: 20px 0; }
 </style></head><body>";
 
 $writer = new PngWriter();
 
-for ($i = 1; $i <= $amount; $i++) {
-    $uniqueCode = 'TICK-' . strtoupper(uniqid()) . '-' . $i;
+// Genereer 1 unieke code voor de hele groep
+$uniqueCode = 'TICK-' . strtoupper(uniqid()) . '-GRP' . $amount;
 
-    // QR code maken voor dit unieke ticket
-    $qr = new QrCode($uniqueCode);
-    $qrResult = $writer->write($qr);
-    $qrBase64 = base64_encode($qrResult->getString());
+// Voeg het aantal personen toe aan de QR code data
+$qrData = json_encode([
+    'code' => $uniqueCode,
+    'persons' => $amount,
+    'event' => $event,
+    'name' => $name
+]);
 
-    $html .= "<div class='ticket'>
-                <h1>TICKET #{$i}</h1>
-                <h2>{$event}</h2>
-                <p><strong>Bezoeker:</strong> {$name}</p>
-                <p><strong>Locatie:</strong> Festivalterrein A, Antwerpen</p>
-                <p><strong>Unieke Code:</strong> {$uniqueCode}</p>
-                <div class='qr-code'><img src='data:image/png;base64,{$qrBase64}' width='200'></div>
-            </div>";
+// QR code maken voor dit groepsticket
+$qr = new QrCode($qrData);
+$qrResult = $writer->write($qr);
+$qrBase64 = base64_encode($qrResult->getString());
 
-    // Voeg een pagina-einde toe behalve bij het laatste ticket
-    if ($i < $amount) {
-        $html .= "<div class='page-break'></div>";
-    }
-}
+$html .= "<div class='ticket'>
+            <h1>GROEPSTICKET</h1>
+            <h2>{$event}</h2>
+            <p><strong>Hoofdbezoeker:</strong> {$name}</p>
+            <p><strong>Locatie:</strong> Festivalterrein A, Antwerpen</p>
+            <p class='persons'>Geldig voor {$amount} " . ($amount == 1 ? 'persoon' : 'personen') . "</p>
+            <p><strong>Unieke Code:</strong> {$uniqueCode}</p>
+            <div class='qr-code'><img src='data:image/png;base64,{$qrBase64}' width='250'></div>
+        </div>";
 
 $html .= "</body></html>";
 
@@ -70,7 +73,7 @@ if (!is_dir($directory)) {
     mkdir($directory);
 }
 
-$filename = 'Tickets_' . time() . '.pdf';
+$filename = 'Ticket_' . $amount . 'persons_' . time() . '.pdf';
 $filepath = $directory . $filename;
 file_put_contents($filepath, $pdfOutput);
 // --- PDF & QR GENERATIE EINDE ---
@@ -81,8 +84,8 @@ $ppticket = 45.0;
 $status = 'unused'; // Status hersteld naar een waarde die in de ENUM staat
 $order_date = date('Y-m-d H:i:s');
 
-$stmt = $conn->prepare("INSERT INTO tickets (status, email, amount, user_id, ppticket, order_date) VALUES (?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssiids", $status, $email, $amount, $user_id, $ppticket, $order_date);
+$stmt = $conn->prepare("INSERT INTO tickets (status, email, amount, user_id, ppticket, order_date, unique_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
+$stmt->bind_param("ssiidss", $status, $email, $amount, $user_id, $ppticket, $order_date, $uniqueCode);
 $stmt->execute();
 $stmt->close();
 // --- DATABASE PUSH EINDE ---
@@ -93,11 +96,12 @@ $body = "
 <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
     <div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
         <h2 style='color: #764ba2;'>Bedankt voor je bestelling, {$name}!</h2>
-        <p>Je hebt succesvol {$amount} tickets gekocht voor <strong>{$event}</strong>.</p>
+        <p>Je hebt succesvol een <strong>groepsticket</strong> gekocht voor <strong>{$amount} " . ($amount == 1 ? 'persoon' : 'personen') . "</strong> voor <strong>{$event}</strong>.</p>
         <p><strong>Totaalbedrag:</strong> &euro;{$total}</p>
         <hr style='border: 0; border-top: 1px solid #eee;'>
-        <p>Je tickets zijn bijgevoegd als bijlage bij deze e-mail.</p>
+        <p>Je groepsticket is bijgevoegd als bijlage bij deze e-mail. Deze ene QR-code geeft toegang aan alle {$amount} personen.</p>
         <p>We zien je graag op het evenement!</p>
+        <br>
         <br>
         <p>Met vriendelijke groet,<br><strong>Het TicketMaster Team</strong></p>
     </div>
@@ -120,12 +124,12 @@ try {
     $mail->addAddress($email, $name);
 
     // Voeg de PDF toe als bijlage vanuit het geheugen
-    $mail->addStringAttachment($pdfOutput, 'Tickets_' . time() . '.pdf');
+    $mail->addStringAttachment($pdfOutput, 'GroupTicket_' . $amount . 'persons.pdf');
 
     $mail->isHTML(true);
-    $mail->Subject = 'Je tickets voor: ' . $event;
+    $mail->Subject = 'Je groepsticket voor: ' . $event;
     $mail->Body    = $body;
-    $mail->AltBody = "Bedankt voor je bestelling, {$name}. Je hebt {$amount} tickets gekocht voor {$event}.";
+    $mail->AltBody = "Bedankt voor je bestelling, {$name}. Je hebt een groepsticket voor {$amount} " . ($amount == 1 ? 'persoon' : 'personen') . " gekocht voor {$event}.";
 
     $mail->send();
     $mail_status = "De e-mail met je tickets is verzonden naar " . htmlspecialchars($email);
@@ -136,11 +140,11 @@ try {
 <div class="container">
     <div class="row">
         <div class="col">
-            <h2>Thank you for your order</h2>
-            <p>You need to pay <?php echo $total ?> EUR
-            <p>
+            <h2>Bedankt voor je bestelling</h2>
+            <p>Je moet <?php echo $total ?> EUR betalen voor je groepsticket (<?php echo $amount ?> <?php echo $amount == 1 ? 'persoon' : 'personen' ?>)</p>
             <p><?php echo $mail_status; ?></p>
             <p>Email: <?php echo $email ?></p>
+            <a href="<?php echo $filepath; ?>" download="<?php echo $filename; ?>" class="btn btn-primary">Download je groepsticket (PDF)</a>
         </div>
     </div>
 </div>
