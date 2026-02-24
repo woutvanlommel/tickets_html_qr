@@ -3,3 +3,5 @@ email_config.php
 assets/pdf/*.pdf
 *.log
 .env
+google_config.php
+google_config.template.php

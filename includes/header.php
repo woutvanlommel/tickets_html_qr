@@ -1,11 +1,23 @@
-<?php 
+<?php
 // Start session only if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Compute base path for links so header works when app is in a subfolder (e.g. /tickets)
+$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+if ($basePath === '') {
+    $basePath = '/';
+}
+function link_for(string $path)
+{
+    global $basePath;
+    if ($basePath === '/') return '/' . ltrim($path, '/');
+    return $basePath . '/' . ltrim($path, '/');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -100,14 +112,20 @@ if (session_status() === PHP_SESSION_NONE) {
             box-shadow: var(--shadow-hover);
         }
 
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             color: var(--text-primary);
             text-align: center;
             margin-bottom: 1.5rem;
             font-weight: 600;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             background: var(--input-bg);
             color: var(--text-primary);
             border: 1.5px solid var(--input-border);
@@ -116,7 +134,8 @@ if (session_status() === PHP_SESSION_NONE) {
             transition: all 0.2s ease;
         }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus,
+        .form-select:focus {
             background: var(--input-bg);
             color: var(--text-primary);
             border-color: var(--gradient-start);
@@ -149,7 +168,10 @@ if (session_status() === PHP_SESSION_NONE) {
             transform: translateY(0);
         }
 
-        .btn-secondary, .btn-danger, .btn-success, .btn-warning {
+        .btn-secondary,
+        .btn-danger,
+        .btn-success,
+        .btn-warning {
             border-radius: 12px;
             padding: 0.875rem 1.5rem;
             font-weight: 600;
@@ -270,6 +292,7 @@ if (session_status() === PHP_SESSION_NONE) {
         }
     </style>
 </head>
+
 <body>
     <div class="container-fluid">
         <nav class="navbar navbar-expand-lg bg-body-tertiary">
@@ -280,11 +303,11 @@ if (session_status() === PHP_SESSION_NONE) {
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                     <div class="navbar-nav">
-                        <a class="nav-link" href="index.php">Home</a>
-                        <a class="nav-link" href="about.php">About</a>
-                        <a class="nav-link" href="order.php">Order</a>
-                        <a class="nav-link" href="contact.php">Contact</a>
-                        <a class="nav-link" href="logout.php">Logout</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('index.php')); ?>">Home</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('about.php')); ?>">About</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('order.php')); ?>">Order</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('contact.php')); ?>">Contact</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('logout.php')); ?>">Logout</a>
                     </div>
                 </div>
             </div>
@@ -294,10 +317,10 @@ if (session_status() === PHP_SESSION_NONE) {
     <!-- Dark Mode Toggle Button -->
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
         <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/>
+            <path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z" />
         </svg>
         <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
-            <path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/>
+            <path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z" />
         </svg>
     </button>
 
@@ -316,7 +339,7 @@ if (session_status() === PHP_SESSION_NONE) {
         themeToggle.addEventListener('click', () => {
             const theme = html.getAttribute('data-theme');
             const newTheme = theme === 'light' ? 'dark' : 'light';
-            
+
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateIcons(newTheme);
