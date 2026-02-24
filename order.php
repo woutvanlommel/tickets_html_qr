@@ -6,7 +6,7 @@ include 'includes/header.php'
   <div class="row">
     <div class="col">
       <h1>Order</h1>
-      <img src="assets/images/sf.jpg" class="imgoffer">
+      <button class="btn btn-primary" onclick="location.href='events.php';">Go to the events page</button>
       <?php if (isset($_SESSION['email'])) { ?>
         <h2>Hello <?php echo $_SESSION['name'] ?>,</h2>
         <p>Please order your tickets here! The tickets wil also be sent to you via this email adres: <b><?php echo $_SESSION['email'] ?></b></p>

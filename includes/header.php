@@ -306,6 +306,7 @@ function link_for(string $path)
                         <a class="nav-link" href="<?php echo htmlspecialchars(link_for('index.php')); ?>">Home</a>
                         <a class="nav-link" href="<?php echo htmlspecialchars(link_for('about.php')); ?>">About</a>
                         <a class="nav-link" href="<?php echo htmlspecialchars(link_for('order.php')); ?>">Order</a>
+                        <a class="nav-link" href="<?php echo htmlspecialchars(link_for('events.php')); ?>">Events</a>
                         <a class="nav-link" href="<?php echo htmlspecialchars(link_for('contact.php')); ?>">Contact</a>
                         <a class="nav-link" href="<?php echo htmlspecialchars(link_for('logout.php')); ?>">Logout</a>
                     </div>
