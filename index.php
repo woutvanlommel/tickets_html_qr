@@ -1,4 +1,5 @@
 <?php
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
@@ -31,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
         $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
         // Check file extension
-        if($imageFileType != "jpg" && $imageFileType != "jpeg" && $imageFileType != "pdf" ) {
+        if ($imageFileType != "jpg" && $imageFileType != "jpeg" && $imageFileType != "pdf") {
             $message = "Sorry, only JPG & PDF files are allowed.";
         } else {
             // Simple file upload - purely for educational demo
@@ -60,13 +61,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
             //Server settings
             $mail->SMTPDebug = SMTP::DEBUG_OFF;                         //Disable verbose debug output
             $mail->isSMTP();                                            //Send using SMTP
-            $mail->Host       = '127.0.0.1';                            //Set the SMTP server to send through
+            $mail->Host       = 'sandbox.smtp.mailtrap.io';                            //Set the SMTP server to send through
             $mail->SMTPAuth   = false;                                  //Disable SMTP authentication for MailHog
-            $mail->Username   = 'user@example.com';                     //SMTP username
+            $mail->Username   = '0ff01c6e27eeed';                     //SMTP username
             $mail->Password   = 'secret';                               //SMTP password
-            $mail->SMTPSecure = '';                                     //Disable implicit TLS encryption for MailHog
+            $mail->SMTPSecure = '3463f55aa8c5a3';                                     //Disable implicit TLS encryption for MailHog
             $mail->SMTPAutoTLS = false;                                 //Prevent STARTTLS negotiation with MailHog
-            $mail->Port       = 1025;                                   //TCP port MailHog listens on
+            $mail->Port       = 2525;                                   //TCP port MailHog listens on
 
             //Recipients
             $mail->setFrom('hello@ticketman.be', 'TicketMan');
@@ -79,7 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
 
             //Content
             $mail->isHTML(true);                                  //Set email format to HTML
-            $mail->Subject = $name.' Welcome to TicketMAN';
+            $mail->Subject = $name . ' Welcome to TicketMAN';
             $mail->Body    = '<!DOCTYPE html>
 <html lang="en">
     <head>
@@ -110,7 +111,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
                         </tr>
                         <tr>
                             <td style="padding:24px; color:#111827; font-size:14px; line-height:1.5;">
-                                <p style="margin:0 0 12px 0;">Hi '.$name.',</p>
+                                <p style="margin:0 0 12px 0;">Hi ' . $name . ',</p>
                                 <p style="margin:0 0 12px 0;">
                                     This is a simple, minimal HTML email example with basic inline styling.
                                 </p>
@@ -147,7 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
         } catch (Exception $e) {
             echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
         }
-       
     } else {
         $message = "Error: " . ($stmt ? $stmt->error : $conn->error);
     }
@@ -162,45 +162,46 @@ $sql = "SELECT * FROM users";
 $result = mysqli_query($conn, $sql);
 ?>
 
-    <div class="container mt-2">
-        <?php if ($message): ?>
-            <div class="alert alert-info"><?php echo $message; ?></div>
-        <?php endif; ?>
+<div class="container mt-2">
+    <?php if ($message): ?>
+        <div class="alert alert-info"><?php echo $message; ?></div>
+    <?php endif; ?>
 
-        <div class="row justify-content-center mt-5">
-            <div class="col-md-12">
-                <h1>Register</h1>
-                <!-- Form submits to self -->
-                <form action="" method="post" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="exampleInputEmail1" class="form-label">Email address</label>
-                        <input type="email" class="form-control" name="email" aria-describedby="emailHelp" required>
-                        <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="exampleInputPassword1" class="form-label">Password</label>
-                        <input type="password" class="form-control" name="password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="profilePic" class="form-label">Profile Picture (JPG or PDF only)</label>
-                        <input type="file" class="form-control" name="profile_pic" id="profilePic" accept=".jpg,.jpeg,.pdf">
-                    </div>
-                    <div class="mb-3">
-                        <label for="exampleName" class="form-label">Name</label>
-                        <input type="text" class="form-control" name="name" required>
-                    </div>
-                    <!-- Add name="register" to identify the action -->
-                    <button type="submit" name="register" class="btn btn-primary">Submit</button>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-12">
+            <h1>Register</h1>
+            <!-- Form submits to self -->
+            <form action="" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="exampleInputEmail1" class="form-label">Email address</label>
+                    <input type="email" class="form-control" name="email" aria-describedby="emailHelp" required>
+                    <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="exampleInputPassword1" class="form-label">Password</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+                <div class="mb-3">
+                    <label for="profilePic" class="form-label">Profile Picture (JPG or PDF only)</label>
+                    <input type="file" class="form-control" name="profile_pic" id="profilePic" accept=".jpg,.jpeg,.pdf">
+                </div>
+                <div class="mb-3">
+                    <label for="exampleName" class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <!-- Add name="register" to identify the action -->
+                <button type="submit" name="register" class="btn btn-primary">Submit</button>
 
-                    <!-- Simple Google register/sign-in button for educational demo -->
-                    <a href="google-login.php" class="btn btn-outline-dark w-100 mt-2">
-                        Register / Sign in with Google
-                    </a>
+                <!-- Simple Google register/sign-in button for educational demo -->
+                <a href="google-login.php" class="btn btn-outline-dark w-100 mt-2">
+                    Register / Sign in with Google
+                </a>
 
-                    <p class="mt-3">Already have an account? <a href="login.php">Login here</a></p>
-                </form>
-            </div>
+                <p class="mt-3">Already have an account? <a href="login.php">Login here</a></p>
+            </form>
         </div>
     </div>
+</div>
 </body>
+
 </html>

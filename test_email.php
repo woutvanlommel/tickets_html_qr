@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Email Test Script
  * 
@@ -11,6 +12,14 @@ require 'vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+
+// Load SMTP configuration (create email_config.php from email_config.template.php)
+if (file_exists(__DIR__ . '/email_config.php')) {
+    require __DIR__ . '/email_config.php';
+} else {
+    // fallback to template defaults if file missing
+    require __DIR__ . '/email_config.template.php';
+}
 
 echo "==============================\n";
 echo "  EMAIL CONFIGURATION TEST\n";
@@ -27,33 +36,34 @@ try {
     // Server settings
     $mail->SMTPDebug = 2; // Enable verbose debug output
     $mail->isSMTP();
-    
-    // MailHog SMTP settings
-    $mail->Host       = 'localhost';
-    $mail->SMTPAuth   = false;
-    $mail->Username   = '';
-    $mail->Password   = '';
-    $mail->SMTPSecure = '';
-    $mail->Port       = 1025;
-    
+
+    // Use values from config
+    $mail->Host       = defined('SMTP_HOST') ? SMTP_HOST : 'localhost';
+    $mail->SMTPAuth   = !empty(defined('SMTP_USERNAME') ? SMTP_USERNAME : '');
+    $mail->Username   = defined('SMTP_USERNAME') ? SMTP_USERNAME : '';
+    $mail->Password   = defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '';
+    $mail->SMTPSecure = defined('SMTP_ENCRYPTION') ? SMTP_ENCRYPTION : '';
+    $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 1025;
+
     // Recipients
-    $mail->setFrom('no-reply@example.test', 'Test Sender');
+    $fromAddress = defined('MAIL_FROM_ADDRESS') ? MAIL_FROM_ADDRESS : 'no-reply@example.test';
+    $fromName = defined('MAIL_FROM_NAME') ? MAIL_FROM_NAME : 'Test Sender';
+    $mail->setFrom($fromAddress, $fromName);
     $mail->addAddress($test_email);
-    
+
     // Content
     $mail->isHTML(true);
     $mail->Subject = 'Email Test - Ticket System';
     $mail->Body    = '<h1>Email Test Successful!</h1><p>Your email configuration is working correctly.</p>';
     $mail->AltBody = 'Email Test Successful! Your email configuration is working correctly.';
-    
+
     $mail->send();
-    
+
     echo "\n==============================\n";
     echo "✅ SUCCESS! Email has been sent\n";
     echo "==============================\n";
     echo "Check your inbox at: $test_email\n";
     echo "(Don't forget to check spam folder)\n\n";
-    
 } catch (Exception $e) {
     echo "\n==============================\n";
     echo "❌ ERROR! Email could not be sent\n";
@@ -69,5 +79,3 @@ try {
 echo "==============================\n";
 echo "Test complete.\n";
 echo "==============================\n";
-
-?>

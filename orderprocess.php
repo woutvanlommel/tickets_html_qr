@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Process File
  * 
@@ -156,7 +157,7 @@ $pdf_html = '
     </div>
 </body>
 </html>
-'; 
+';
 // Load HTML content into domPDF
 $dompdf->loadHtml($pdf_html);
 // Set paper size and orientation
@@ -168,7 +169,19 @@ $pdf_output = $dompdf->output();
 // Save the PDF to a file on the server
 $pdf_filename = 'ticket_' . $order_number . '.pdf';
 $pdf_filepath = 'assets/pdf/' . $pdf_filename;
-file_put_contents($pdf_filepath, $pdf_output);
+// Ensure the directory for PDFs exists and is writable
+$pdf_dir = dirname($pdf_filepath);
+if (!is_dir($pdf_dir)) {
+    if (!mkdir($pdf_dir, 0755, true) && !is_dir($pdf_dir)) {
+        // If directory creation failed, stop and show an error
+        die('Failed to create directories: ' . htmlspecialchars($pdf_dir));
+    }
+}
+
+// Save the PDF to a file on the server
+if (file_put_contents($pdf_filepath, $pdf_output) === false) {
+    die('Failed to write PDF file to: ' . htmlspecialchars($pdf_filepath));
+}
 
 
 // ===============================================
@@ -181,26 +194,35 @@ file_put_contents($pdf_filepath, $pdf_output);
 $mail = new PHPMailer(true);
 
 try {
+    // Load SMTP configuration
+    if (file_exists(__DIR__ . '/email_config.php')) {
+        require __DIR__ . '/email_config.php';
+    } else {
+        require __DIR__ . '/email_config.template.php';
+    }
+
     // Server settings
     $mail->isSMTP(); // Use SMTP protocol
-    $mail->Host       = 'localhost'; // MailHog SMTP host
-    $mail->SMTPAuth   = false; // No SMTP authentication for MailHog
-    $mail->Username   = ''; // Not required for MailHog
-    $mail->Password   = ''; // Not required for MailHog
-    $mail->SMTPSecure = ''; // No encryption for MailHog
-    $mail->Port       = 1025; // MailHog SMTP port
-    
+    $mail->Host       = defined('SMTP_HOST') ? SMTP_HOST : 'localhost';
+    $mail->SMTPAuth   = !empty(defined('SMTP_USERNAME') ? SMTP_USERNAME : '');
+    $mail->Username   = defined('SMTP_USERNAME') ? SMTP_USERNAME : '';
+    $mail->Password   = defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '';
+    $mail->SMTPSecure = defined('SMTP_ENCRYPTION') ? SMTP_ENCRYPTION : '';
+    $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 1025;
+
     // Recipients
-    $mail->setFrom('no-reply@example.test', 'Ticket System'); // Sender email
+    $fromAddress = defined('MAIL_FROM_ADDRESS') ? MAIL_FROM_ADDRESS : 'no-reply@example.test';
+    $fromName = defined('MAIL_FROM_NAME') ? MAIL_FROM_NAME : 'Ticket System';
+    $mail->setFrom($fromAddress, $fromName); // Sender email
     $mail->addAddress($user_email, $user_name); // Add recipient (customer)
-    
-    // Attach the PDF file
+
+    // Attach the PDF file (uncomment if you want to attach)
     //$mail->addAttachment($pdf_filepath, $pdf_filename);
-    
+
     // Email content - HTML format
     $mail->isHTML(true); // Set email format to HTML
     $mail->Subject = 'Your Ticket Order Confirmation - ' . $order_number;
-    
+
     // Create beautiful HTML email body
     $mail->Body = '
     <!DOCTYPE html>
@@ -331,21 +353,20 @@ try {
     </body>
     </html>
     ';
-    
+
     // Alternative plain text body for email clients that don't support HTML
     $mail->AltBody = 'Thank you for your order, ' . $user_name . '!' . "\n\n"
-                   . 'Order Number: ' . $order_number . "\n"
-                   . 'Number of Tickets: ' . $amount_tickets . "\n"
-                   . 'Total Amount: EUR ' . number_format($total_amount, 2) . "\n\n"
-                   . 'Your tickets are attached to this email as a PDF file.' . "\n\n"
-                   . 'Best regards,' . "\n"
-                   . 'The Ticket System Team';
-    
+        . 'Order Number: ' . $order_number . "\n"
+        . 'Number of Tickets: ' . $amount_tickets . "\n"
+        . 'Total Amount: EUR ' . number_format($total_amount, 2) . "\n\n"
+        . 'Your tickets are attached to this email as a PDF file.' . "\n\n"
+        . 'Best regards,' . "\n"
+        . 'The Ticket System Team';
+
     // Send the email
     $mail->send();
     $email_sent = true;
     $email_message = 'Email sent successfully!';
-    
 } catch (Exception $e) {
     // If email fails, capture error but continue (user can still download PDF)
     $email_sent = false;
@@ -356,6 +377,7 @@ try {
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Order Confirmation</title>
     <style>
@@ -367,6 +389,7 @@ try {
             border-radius: 5px;
             margin: 20px 0;
         }
+
         .warning-box {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -375,6 +398,7 @@ try {
             border-radius: 5px;
             margin: 20px 0;
         }
+
         .download-btn {
             display: inline-block;
             padding: 15px 30px;
@@ -385,66 +409,69 @@ try {
             margin: 10px 5px;
             font-weight: bold;
         }
+
         .download-btn:hover {
             background: #0056b3;
             color: white;
         }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <div class="row">
-        <div class="col">
-            <h1>🎉 Thank You for Your Order!</h1>
-            
-            <div class="success-box">
-                <h3>✅ Order Placed Successfully</h3>
-                <p><strong>Order Number:</strong> <?php echo htmlspecialchars($order_number); ?></p>
-                <p><strong>Number of Tickets:</strong> <?php echo $amount_tickets; ?></p>
-                <p><strong>Total Amount:</strong> EUR <?php echo number_format($total_amount, 2); ?></p>
-            </div>
-            
-            <?php if ($email_sent): ?>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h1>🎉 Thank You for Your Order!</h1>
+
                 <div class="success-box">
-                    <h4>📧 Email Confirmation Sent</h4>
-                    <p>A confirmation email with your tickets has been sent to: <strong><?php echo htmlspecialchars($user_email); ?></strong></p>
-                    <p>Please check your inbox (and spam folder if you don't see it).</p>
+                    <h3>✅ Order Placed Successfully</h3>
+                    <p><strong>Order Number:</strong> <?php echo htmlspecialchars($order_number); ?></p>
+                    <p><strong>Number of Tickets:</strong> <?php echo $amount_tickets; ?></p>
+                    <p><strong>Total Amount:</strong> EUR <?php echo number_format($total_amount, 2); ?></p>
                 </div>
-            <?php else: ?>
-                <div class="warning-box">
-                    <h4>⚠️ Email Status</h4>
-                    <p><?php echo htmlspecialchars($email_message); ?></p>
-                    <p>Don't worry! You can still download your tickets below.</p>
+
+                <?php if ($email_sent): ?>
+                    <div class="success-box">
+                        <h4>📧 Email Confirmation Sent</h4>
+                        <p>A confirmation email with your tickets has been sent to: <strong><?php echo htmlspecialchars($user_email); ?></strong></p>
+                        <p>Please check your inbox (and spam folder if you don't see it).</p>
+                    </div>
+                <?php else: ?>
+                    <div class="warning-box">
+                        <h4>⚠️ Email Status</h4>
+                        <p><?php echo htmlspecialchars($email_message); ?></p>
+                        <p>Don't worry! You can still download your tickets below.</p>
+                    </div>
+                <?php endif; ?>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <h3>📥 Download Your Tickets</h3>
+                    <a href="<?php echo htmlspecialchars($pdf_filepath); ?>" class="download-btn" download>
+                        ⬇️ Download PDF Ticket
+                    </a>
+                    <a href="index.php" class="download-btn" style="background: #28a745;">
+                        🏠 Return to Home
+                    </a>
                 </div>
-            <?php endif; ?>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <h3>📥 Download Your Tickets</h3>
-                <a href="<?php echo htmlspecialchars($pdf_filepath); ?>" class="download-btn" download>
-                    ⬇️ Download PDF Ticket
-                </a>
-                <a href="index.php" class="download-btn" style="background: #28a745;">
-                    🏠 Return to Home
-                </a>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <h4>📋 Next Steps:</h4>
-                <ol>
-                    <li>Download and save your ticket PDF</li>
-                    <li>Print your ticket or keep it on your mobile device</li>
-                    <li>Bring your ticket and a valid ID to the event</li>
-                    <li>Arrive 30 minutes before the event starts</li>
-                </ol>
-                
-                <p style="color: #dc3545; font-weight: bold;">
-                    ⚠️ Important: Tickets are non-refundable
-                </p>
+
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h4>📋 Next Steps:</h4>
+                    <ol>
+                        <li>Download and save your ticket PDF</li>
+                        <li>Print your ticket or keep it on your mobile device</li>
+                        <li>Bring your ticket and a valid ID to the event</li>
+                        <li>Arrive 30 minutes before the event starts</li>
+                    </ol>
+
+                    <p style="color: #dc3545; font-weight: bold;">
+                        ⚠️ Important: Tickets are non-refundable
+                    </p>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 </body>
+
 </html>
