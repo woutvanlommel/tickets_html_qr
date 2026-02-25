@@ -1,146 +1,183 @@
 <?php
-// Admin page: simple CSV import/export for users.
-// This page renders HTML and handles the CSV import form.
-
-// Start the HTML layout + session (guarded in header.php)
+// admin.php
 include 'includes/header.php';
-
-// Connect to the MySQL database using mysqli
 require 'includes/conn.php';
 
-// Get the current user role from the database.
+// 1. Toegangscontrole: Alleen voor admins
 $currentUserId = $_SESSION['user_id'];
-
-// Query the role for the current user
 $roleResult = mysqli_query($conn, "SELECT role FROM users WHERE id = $currentUserId");
-
-// If the query succeeds, read the role; otherwise default to 'client'
 $currentRole = $roleResult ? mysqli_fetch_assoc($roleResult)['role'] ?? 'client' : 'client';
 
-// Stop non-admins from accessing the admin tools.
 if ($currentRole !== 'admin') {
-    echo '<div class="container mt-4"><div class="alert alert-danger">Access denied. Admins only.</div></div>';
+    echo '<div class="container mt-4"><div class="alert alert-danger">Toegang geweigerd. Alleen admins hebben toegang tot deze pagina.</div></div>';
     exit;
 }
 
-// Export is handled by export_users.php to avoid HTML output.
-// This keeps CSV output clean and free of any HTML markup.
+$message = '';
 
-// --- IMPORT: handle CSV upload ---
-// Message shown to the user after an import attempt
-$importMessage = '';
+// 2. LOGICA: Gebruikers Importeren via CSV
 if (isset($_POST['import_users'])) {
-    // Validate the upload
     if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-        $importMessage = 'Please upload a valid CSV file.';
+        $message = '<div class="alert alert-warning">Upload a valid CSV file.</div>';
     } else {
-        // Use the temporary file path for reading
-        $tmpPath = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($tmpPath, 'r');
+        $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+        if ($handle !== false) {
+            fgetcsv($handle); // Sla de header-rij over
+            $count = 0;
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                // Verwachte kolommen: 0:Naam, 1:Email, 2:Rol
+                $name = mysqli_real_escape_string($conn, $data[0]);
+                $email = mysqli_real_escape_string($conn, $data[1]);
+                $role = mysqli_real_escape_string($conn, $data[2]);
+                $pass = password_hash('changeme', PASSWORD_DEFAULT);
 
-        if ($handle === false) {
-            $importMessage = 'Unable to read the uploaded file.';
-        } else {
-            // Read header row (expected columns: ID, Name, Email, Role)
-            // We support flexible headers (case-insensitive).
-            $header = fgetcsv($handle, 0, ',', '"', '\\');
-            $map = [];
-            if ($header) {
-                foreach ($header as $index => $columnName) {
-                    $key = strtolower(trim($columnName));
-                    $map[$key] = $index;
+                $sql = "INSERT INTO users (name, email, role, password) VALUES ('$name', '$email', '$role', '$pass') 
+                        ON DUPLICATE KEY UPDATE role='$role'";
+                if (mysqli_query($conn, $sql)) {
+                    $count++;
                 }
             }
-
-            // Prepare insert statement (simple + safe)
-            // We only insert name/email/role + a default password.
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
-
-            $inserted = 0;
-            $skipped = 0;
-
-            // Read each CSV row
-            while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
-                // Read fields by header name (fallback to fixed positions).
-                $name = $map['name'] ?? 1;
-                $email = $map['email'] ?? 2;
-                $role = $map['role'] ?? 3;
-
-                $nameVal = trim($row[$name] ?? '');
-                $emailVal = trim($row[$email] ?? '');
-                $roleVal = trim($row[$role] ?? '');
-
-                // Skip rows without required fields
-                if ($nameVal === '' || $emailVal === '') {
-                    $skipped++;
-                    continue;
-                }
-
-                // Keep it simple: if role is missing/invalid, default to client.
-                if ($roleVal !== 'admin' && $roleVal !== 'client') {
-                    $roleVal = 'client';
-                }
-
-                // Simple default password for imported users (hashed).
-                // User should change it after first login.
-                $defaultPassword = password_hash('changeme', PASSWORD_DEFAULT);
-
-                // Skip if email already exists.
-                $emailEsc = mysqli_real_escape_string($conn, $emailVal);
-                $exists = mysqli_query($conn, "SELECT id FROM users WHERE email = '$emailEsc' LIMIT 1");
-                if ($exists && mysqli_num_rows($exists) > 0) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Insert the user row
-                if ($stmt && $stmt->bind_param('ssss', $nameVal, $emailVal, $defaultPassword, $roleVal) && $stmt->execute()) {
-                    $inserted++;
-                } else {
-                    $skipped++;
-                }
-            }
-
-            if ($stmt) {
-                $stmt->close();
-            }
-
-            // Close the CSV file handle
             fclose($handle);
-            $importMessage = "Import finished. Inserted: $inserted. Skipped: $skipped.";
+            $message = "<div class='alert alert-success'>Import voltooid! $count gebruikers verwerkt.</div>";
         }
     }
 }
+
+// 3. LOGICA: Event Verwijderen
+if (isset($_POST['delete_event'])) {
+    $id = (int)$_POST['event_id'];
+    $stmt = $conn->prepare("DELETE FROM events WHERE id = ?");
+    $stmt->bind_param('i', $id);
+    if ($stmt->execute()) {
+        $message = '<div class="alert alert-success">Event succesvol verwijderd.</div>';
+    }
+    $stmt->close();
+}
+
+// 4. LOGICA: Event Toevoegen
+if (isset($_POST['add_event'])) {
+    $name = trim($_POST['event_name']);
+    $venue = trim($_POST['event_venue']);
+    $date = $_POST['event_date'];
+    $ppl = $_POST['event_ppl'] !== '' ? (int)$_POST['event_ppl'] : null;
+
+    if (!empty($name)) {
+        $stmt = $conn->prepare("INSERT INTO events (name, venue, event_date, ppl) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param('sssi', $name, $venue, $date, $ppl);
+        if ($stmt->execute()) {
+            $message = '<div class="alert alert-success">Nieuw event toegevoegd!</div>';
+        }
+        $stmt->close();
+    }
+}
+
+// 5. DATA OPHALEN: Actuele lijst met events
+$res = mysqli_query($conn, "SELECT * FROM events ORDER BY event_date ASC");
+$eventsList = mysqli_fetch_all($res, MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
-    <h1>Admin - Users CSV</h1>
-
-    <?php if ($importMessage): ?>
-        <div class="alert alert-info"><?php echo $importMessage; ?></div>
-    <?php endif; ?>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Export users</h5>
-            <p class="card-text">Download a simple CSV with ID, Name, Email, Role.</p>
-            <a class="btn btn-primary" href="export_users.php">Download CSV</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Admin Dashboard</h1>
+        <div>
+            <a href="export_users.php" class="btn btn-outline-primary btn-sm">Export Users</a>
+            <a href="export_events.php" class="btn btn-outline-secondary btn-sm">Export Events</a>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Import users</h5>
-            <p class="card-text">Upload a CSV with header: ID, Name, Email, Role. New users get password <strong>changeme</strong>.</p>
-            <form action="" method="post" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <input class="form-control" type="file" name="csv_file" accept=".csv" required>
+    <?php echo $message; ?>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Events Beheren</h5>
                 </div>
-                <button class="btn btn-success" type="submit" name="import_users">Import CSV</button>
-            </form>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Event Info</th>
+                                <th>Datum</th>
+                                <th>Capaciteit</th>
+                                <th class="text-end pe-3">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($eventsList)): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Geen events gevonden.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($eventsList as $ev): ?>
+                                    <tr>
+                                        <td class="ps-3">
+                                            <strong><?php echo htmlspecialchars($ev['name']); ?></strong><br>
+                                            <small class="text-muted"><?php echo htmlspecialchars($ev['venue']); ?></small>
+                                        </td>
+                                        <td><?php echo date('d-m-Y', strtotime($ev['event_date'])); ?></td>
+                                        <td><?php echo $ev['ppl'] ? number_format($ev['ppl'], 0, ',', '.') : '—'; ?></td>
+                                        <td class="text-end pe-3">
+                                            <form method="POST" onsubmit="return confirm('Weet je zeker dat je dit event wilt verwijderen?');" style="display:inline;">
+                                                <input type="hidden" name="event_id" value="<?php echo $ev['id']; ?>">
+                                                <button type="submit" name="delete_event" class="btn btn-sm btn-danger">Verwijder</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">Importeer Gebruikers (CSV)</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Kolomvolgorde: Naam, Email, Rol.</p>
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input type="file" name="csv_file" class="form-control form-control-sm" accept=".csv" required>
+                        </div>
+                        <button type="submit" name="import_users" class="btn btn-success btn-sm w-100">Start Import</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Nieuw Event Toevoegen</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Naam *</label>
+                            <input type="text" name="event_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Locatie</label>
+                            <input type="text" name="event_venue" class="form-control form-control-sm">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Datum</label>
+                            <input type="date" name="event_date" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small mb-1">Capaciteit</label>
+                            <input type="number" name="event_ppl" class="form-control form-control-sm" min="0">
+                        </div>
+                        <button type="submit" name="add_event" class="btn btn-primary btn-sm w-100">Opslaan</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 </body>
+
 </html>
